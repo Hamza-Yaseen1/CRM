@@ -125,11 +125,23 @@ service cloud.firestore {
         // Validate status transition
         && isValidTransition(resource.data.status, request.resource.data.status)
         // Once called, cannot be uncalled
-        && (!resource.data.callStatus.called || request.resource.data.callStatus.called == true)
-        // Cannot change phone number
-        && resource.data.phone == request.resource.data.phone
-        // Cannot change who added the lead
-        && resource.data.addedBy == request.resource.data.addedBy;
+        // Note: We use || here to allow EITHER a valid transition OR a soft delete
+        && (
+          (
+            // Validate status transition
+            isValidTransition(resource.data.status, request.resource.data.status)
+            // Once called, cannot be uncalled
+            && (!resource.data.callStatus.called || request.resource.data.callStatus.called == true)
+            // Cannot change phone number
+            && resource.data.phone == request.resource.data.phone
+            // Cannot change who added the lead
+            && resource.data.addedBy == request.resource.data.addedBy
+            // If not soft deleting, then deleted status must remain the same
+            && request.resource.data.deleted == resource.data.deleted
+          )
+          // Allow soft delete (changing deleted to true)
+          || (request.resource.data.deleted == true && resource.data.deleted == false)
+        );
       
       // Marketer can update only their own leads if status is 'new'
       allow update: if isMarketer()
