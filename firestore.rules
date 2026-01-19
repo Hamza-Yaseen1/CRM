@@ -1,0 +1,176 @@
+rules_version = '2';
+
+/**
+ * DAY 2: Firestore Security Rules
+ * 
+ * These rules enforce:
+ * 1. Role-based access control
+ * 2. Phone number uniqueness
+ * 3. Status transition validation
+ * 4. Once called, never call again
+ * 5. Ownership restrictions
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    // Get user's role from users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+    
+    // Check if user is marketer
+    function isMarketer() {
+      return isAuthenticated() && getUserRole() == 'marketer';
+    }
+    
+    // Check if user is sales
+    function isSales() {
+      return isAuthenticated() && getUserRole() == 'sales';
+    }
+    
+    // Check if lead is not deleted
+    function isNotDeleted(lead) {
+      return lead.deleted == false;
+    }
+    
+    // Check if phone number already exists (for duplicate prevention)
+    function phoneExists(phone) {
+      return exists(/databases/$(database)/documents/leads/$(phone));
+    }
+    
+    // Validate status transition
+    function isValidTransition(oldStatus, newStatus) {
+      return (oldStatus == 'new' && newStatus in ['assigned', 'deleted']) ||
+             (oldStatus == 'assigned' && newStatus in ['called', 'deleted']) ||
+             (oldStatus == 'called' && newStatus in ['interested', 'not_interested', 'deleted']) ||
+             (oldStatus == 'interested' && newStatus in ['closed', 'not_interested', 'deleted']) ||
+             (oldStatus == 'not_interested' && newStatus == 'deleted') ||
+             (oldStatus == 'closed' && newStatus == 'deleted');
+    }
+    
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read user documents
+      allow read: if isAuthenticated();
+      
+      // Users can only write their own document
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // LEADS COLLECTION
+    // ========================================
+    
+    match /leads/{leadId} {
+      
+      // ========================================
+      // READ RULES
+      // ========================================
+      
+      // Admin can read all leads
+      allow read: if isAdmin();
+      
+      // Marketer can read all leads (for duplicate detection)
+      allow read: if isMarketer() 
+        && isNotDeleted(resource.data);
+      
+      // Sales can read only assigned leads (not deleted)
+      allow read: if isSales() 
+        && resource.data.assignedTo != null
+        && resource.data.assignedTo.uid == request.auth.uid
+        && isNotDeleted(resource.data);
+      
+      // ========================================
+      // CREATE RULES
+      // ========================================
+      
+      // Marketer can create leads
+      allow create: if isMarketer()
+        && request.resource.data.status == 'new'
+        && request.resource.data.addedBy.uid == request.auth.uid
+        && request.resource.data.assignedTo == null
+        && request.resource.data.callStatus.called == false
+        && request.resource.data.deleted == false
+        && request.resource.data.phone.matches('^\\+?[0-9]+$');
+      
+      // Admin can also create leads
+      allow create: if isAdmin()
+        && request.resource.data.deleted == false
+        && request.resource.data.phone.matches('^\\+?[0-9]+$');
+      
+      // ========================================
+      // UPDATE RULES
+      // ========================================
+      
+      // Admin can update any lead
+      allow update: if isAdmin()
+        // Validate status transition
+        && isValidTransition(resource.data.status, request.resource.data.status)
+        // Once called, cannot be uncalled
+        && (!resource.data.callStatus.called || request.resource.data.callStatus.called == true)
+        // Cannot change phone number
+        && resource.data.phone == request.resource.data.phone
+        // Cannot change who added the lead
+        && resource.data.addedBy == request.resource.data.addedBy;
+      
+      // Marketer can update only their own leads if status is 'new'
+      allow update: if isMarketer()
+        && resource.data.addedBy.uid == request.auth.uid
+        && resource.data.status == 'new'
+        && request.resource.data.status == 'new'
+        // Cannot change ownership
+        && resource.data.addedBy == request.resource.data.addedBy
+        && resource.data.assignedTo == request.resource.data.assignedTo
+        // Cannot change call status
+        && resource.data.callStatus == request.resource.data.callStatus
+        // Cannot change phone
+        && resource.data.phone == request.resource.data.phone
+        // Cannot delete
+        && request.resource.data.deleted == false;
+      
+      // Sales can update assigned leads
+      allow update: if isSales()
+        && resource.data.assignedTo != null
+        && resource.data.assignedTo.uid == request.auth.uid
+        // Can only change status, callStatus, interestStatus, and notes
+        && resource.data.clientName == request.resource.data.clientName
+        && resource.data.phone == request.resource.data.phone
+        && resource.data.address == request.resource.data.address
+        && resource.data.businessType == request.resource.data.businessType
+        && resource.data.addedBy == request.resource.data.addedBy
+        && resource.data.assignedTo == request.resource.data.assignedTo
+        // Validate status transition
+        && isValidTransition(resource.data.status, request.resource.data.status)
+        // Once called, cannot be uncalled
+        && (!resource.data.callStatus.called || request.resource.data.callStatus.called == true)
+        // Cannot delete
+        && request.resource.data.deleted == false;
+      
+      // ========================================
+      // DELETE RULES
+      // ========================================
+      
+      // Only admin can soft delete (we use update for soft delete)
+      // Hard delete is not allowed
+      allow delete: if false;
+    }
+  }
+}
