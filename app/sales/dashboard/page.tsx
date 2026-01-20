@@ -26,7 +26,8 @@ import {
     PhoneCall,
     TrendingUp,
     Award,
-    Loader2
+    Loader2,
+    Eye
 } from 'lucide-react';
 
 export default function SalesDashboardPage() {
@@ -263,10 +264,10 @@ export default function SalesDashboardPage() {
                                             </div>
                                         </div>
                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${lead.status === 'interested' ? 'bg-emerald-100 text-emerald-800' :
-                                                lead.status === 'not_interested' ? 'bg-red-100 text-red-800' :
-                                                    lead.status === 'closed' ? 'bg-indigo-100 text-indigo-800' :
-                                                        lead.status === 'called' ? 'bg-purple-100 text-purple-800' :
-                                                            'bg-amber-100 text-amber-800'
+                                            lead.status === 'not_interested' ? 'bg-red-100 text-red-800' :
+                                                lead.status === 'closed' ? 'bg-indigo-100 text-indigo-800' :
+                                                    lead.status === 'called' ? 'bg-purple-100 text-purple-800' :
+                                                        'bg-amber-100 text-amber-800'
                                             }`}>
                                             {lead.status.replace('_', ' ').toUpperCase()}
                                         </span>
@@ -326,6 +327,14 @@ export default function SalesDashboardPage() {
                                                 Close Deal
                                             </button>
                                         )}
+
+                                        <button
+                                            onClick={() => router.push(`/sales/leads/${lead.id}`)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                            View Details
+                                        </button>
 
                                         <button
                                             onClick={() => {

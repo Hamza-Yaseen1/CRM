@@ -316,8 +316,8 @@ export default function AdminDashboardPage() {
                         <button
                             onClick={() => setShowDeleted(!showDeleted)}
                             className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition ${showDeleted
-                                    ? 'bg-red-600 text-white hover:bg-red-700'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             {showDeleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -380,12 +380,12 @@ export default function AdminDashboardPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${lead.deleted ? 'bg-red-100 text-red-800' :
-                                                        lead.status === 'new' ? 'bg-indigo-100 text-indigo-800' :
-                                                            lead.status === 'assigned' ? 'bg-amber-100 text-amber-800' :
-                                                                lead.status === 'called' ? 'bg-purple-100 text-purple-800' :
-                                                                    lead.status === 'interested' ? 'bg-emerald-100 text-emerald-800' :
-                                                                        lead.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                                                                            'bg-red-100 text-red-800'
+                                                    lead.status === 'new' ? 'bg-indigo-100 text-indigo-800' :
+                                                        lead.status === 'assigned' ? 'bg-amber-100 text-amber-800' :
+                                                            lead.status === 'called' ? 'bg-purple-100 text-purple-800' :
+                                                                lead.status === 'interested' ? 'bg-emerald-100 text-emerald-800' :
+                                                                    lead.status === 'closed' ? 'bg-gray-100 text-gray-800' :
+                                                                        'bg-red-100 text-red-800'
                                                     }`}>
                                                     {lead.deleted ? 'DELETED' : lead.status.replace('_', ' ').toUpperCase()}
                                                 </span>
@@ -398,6 +398,13 @@ export default function AdminDashboardPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => router.push(`/admin/leads/${lead.id}`)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" />
+                                                        View
+                                                    </button>
                                                     {!lead.deleted && !lead.assignedTo && (
                                                         <button
                                                             onClick={() => {
